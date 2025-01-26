@@ -1,43 +1,35 @@
-// Tariff Variables
-const tariffKey = "AGILE-24-10-01" // Agile Octopus October 2024 v1
-const tariffType = "electricity" // electricity or gas
-const regionCode = "J" // Change to your region code, see https://www.guylipman.com/octopus/formulas.html
-const baseUrl = `https://api.octopus.energy/v1/products/${tariffKey}/`
-const tariffCode = `${tariffType[0].toUpperCase()}-1R-${tariffKey}-${regionCode}`; // eg. E-1R-AGILE-24-10-01-J
+// Configuration Constants
+const CONFIG = {
+    // Tariff Settings
+    tariff: {
+        key: "AGILE-24-10-01",  // Agile Octopus October 2024 v1
+        type: "electricity",
+        regionCode: "J",  // See https://www.guylipman.com/octopus/formulas.html
+    },
+    // API Settings
+    api: {
+        // You can get these information from https://octopus.energy/dashboard/new/accounts/personal-details/api-access
+        baseUrl: "https://api.octopus.energy/v1/products/",
+        accountId: "A-3F2D43B6",
+        apiKey: "sk_live_XoChk3KPhJscckbjPoJXhQq3",
+        MPAN: "1900091748210",
+        serialNumber: "24E8057881"
+    },
+    // Widget Style
+    style: {
+        backgroundColor: new Color("#100030"),
+        textColor: new Color("#ffffff"),
+        electricityColor: new Color("#FFD700"),
+        priceIncreaseColor: new Color("#FF3B30"),
+        priceDecreaseColor: new Color("#30D158")
+    }
+};
 
-// Account details
-// You can get these information from https://octopus.energy/dashboard/new/accounts/personal-details/api-access
-const accountId = "<YourAccountId>";
-const apiKey = "<YourApiKey>";
-const MPAN = "<YourMPAN>";
-const serialNumber = "<YourSerialNumber>";
+// Compute derived constants
+const tariffCode = `${CONFIG.tariff.type[0].toUpperCase()}-1R-${CONFIG.tariff.key}-${CONFIG.tariff.regionCode}`;   // eg. E-1R-AGILE-24-10-01-J
+const baseUrl = `${CONFIG.api.baseUrl}${CONFIG.tariff.key}/`;
 
-// Create an empty widget
-async function createWidget() {
-    let listwidget = new ListWidget();
-
-    listwidget.backgroundColor = new Color("#100030");
-    listwidget.addSpacer(20);
-    let heading = listwidget.addText("Agile Octopus")
-    heading.centerAlignText();
-    heading.font = Font.boldSystemFont(16);
-    heading.textColor = new Color("#ffffff");
-
-    listwidget.addSpacer(10);
-
-    return listwidget;
-}
-
-let widget = await createWidget();
-
-async function getAuthToken() {
-    const url = `https://api.octopus.energy/v1/accounts/${accountId}/`
-    const headers = { 'Authorization': `Basic ${apiKey}` };
-    const response = await new Request(url, { header: headers }).loadJSON();
-    return response.auth_token;
-}
-
-// Helper function to check if current date is within BST period
+// Helper Functions
 function isBST(date) {
     const marchLastSunday = new Date(date.getFullYear(), 2, 31);
     marchLastSunday.setDate(31 - (marchLastSunday.getDay() + 1) % 7);
@@ -47,16 +39,13 @@ function isBST(date) {
     return date > marchLastSunday && date < octoberLastSunday;
 }
 
-// Helper function to get the time frame for the price query (current and next half-hour)
 function getQueryTime(today) {
     const [hour, minute, second] = today.toLocaleTimeString().split(":").map(Number)
     const isHour23 = hour === 23;
     const isFirstHalf = minute < 30;
 
-    // Format the start time based on whether we're in first or second half of hour
     const periodFrom = `${hour}:${isFirstHalf ? '00' : '30'}:00`;
 
-    // Format the end time
     let periodTo;
     if (isHour23 && isFirstHalf) {
         periodTo = "23:59:59";
@@ -70,11 +59,11 @@ function getQueryTime(today) {
     return { periodFrom, periodTo };
 }
 
-// Helper function to format dates as YYYY-MM-DD
 function formatDate(date) {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
+// API functions
 // Adjusted function to fetch tariff data for electricity or gas with BST consideration
 async function fetchTariffData() {
     const today = new Date();
@@ -84,9 +73,9 @@ async function fetchTariffData() {
     // Get the time frame for price query
     const { periodFrom, periodTo } = getQueryTime(today);
     if (periodFrom == "23:30:00") {
-        var urlToday = `${baseUrl}${tariffType}-tariffs/${tariffCode}/standard-unit-rates/?period_from=${formatDate(today)}T${periodFrom}Z&period_to=${formatDate(tomorrow)}T${periodTo}Z`;
+        var urlToday = `${baseUrl}${CONFIG.tariff.type}-tariffs/${tariffCode}/standard-unit-rates/?period_from=${formatDate(today)}T${periodFrom}Z&period_to=${formatDate(tomorrow)}T${periodTo}Z`;
     } else {
-        var urlToday = `${baseUrl}${tariffType}-tariffs/${tariffCode}/standard-unit-rates/?period_from=${formatDate(today)}T${periodFrom}Z&period_to=${formatDate(today)}T${periodTo}Z`;
+        var urlToday = `${baseUrl}${CONFIG.tariff.type}-tariffs/${tariffCode}/standard-unit-rates/?period_from=${formatDate(today)}T${periodFrom}Z&period_to=${formatDate(today)}T${periodTo}Z`;
     }
 
     let dataNow, dataNextHour;
@@ -112,24 +101,23 @@ async function fetchConsumptionData() {
     // During BST, adjust the period_to to 22:59:59 to account for UTC+1
     let periodToHour = isBST(today) ? "22:59:59" : "23:59:59";
 
-    // const headers = {"Authorization": `Basic ${btoa(`${apiKey}:`)}`};
-    const urlToday = `https://api.octopus.energy/v1/electricity-meter-points/${MPAN}/meters/${serialNumber}/consumption/?period_from=${formatDate(today)}T00:00:00Z&period_to=${formatDate(today)}T${periodToHour}Z&group_by=day`;
-    const urlYesterday = `https://api.octopus.energy/v1/electricity-meter-points/${MPAN}/meters/${serialNumber}/consumption/?period_from=${formatDate(yesterday)}T00:00:00Z&period_to=${formatDate(yesterday)}T${periodToHour}Z&group_by=day`;
+    const urlToday = `https://api.octopus.energy/v1/electricity-meter-points/${CONFIG.api.MPAN}/meters/${CONFIG.api.serialNumber}/consumption/?period_from=${formatDate(today)}T00:00:00Z&period_to=${formatDate(today)}T${periodToHour}Z&group_by=day`;
+    const urlYesterday = `https://api.octopus.energy/v1/electricity-meter-points/${CONFIG.api.MPAN}/meters/${CONFIG.api.serialNumber}/consumption/?period_from=${formatDate(yesterday)}T00:00:00Z&period_to=${formatDate(yesterday)}T${periodToHour}Z&group_by=day`;
 
     let dataToday, dataYesterday;
     try {
         let requestToday = await new Request(urlToday);
         requestToday.headers = {
-            'Authorization': `Basic ${btoa(`${apiKey}:`)}`
+            'Authorization': `Basic ${btoa(`${CONFIG.api.apiKey}:`)}`
         };
         let responseToday = await requestToday.loadJSON();
 
         let requestYesterday = await new Request(urlYesterday);
         requestYesterday.headers = {
-            'Authorization': `Basic ${btoa(`${apiKey}:`)}`
+            'Authorization': `Basic ${btoa(`${CONFIG.api.apiKey}:`)}`
         };
         let responseYesterday = await requestYesterday.loadJSON();
-        
+
         dataToday = responseToday.results[0] ? responseToday.results[0].consumption.toFixed(2) : "--";
         dataYesterday = responseYesterday.results[0] ? responseYesterday.results[0].consumption.toFixed(2) : "--";
     } catch (error) {
@@ -141,8 +129,22 @@ async function fetchConsumptionData() {
     return { today: dataToday, yesterday: dataYesterday };
 }
 
-// Function to display the tariff data on the widget
-async function displayTariffData(symbolName) {
+// Widget UI Functions
+async function createWidget() {
+    let widget = new ListWidget();
+
+    widget.backgroundColor = new Color("#100030");
+    widget.addSpacer(20);
+    let heading = widget.addText("Agile Octopus")
+    heading.centerAlignText();
+    heading.font = Font.boldSystemFont(16);
+    heading.textColor = new Color("#ffffff");
+
+    widget.addSpacer(10);
+    return widget;
+}
+
+async function displayTariffData(widget, symbolName) {
     const data = await fetchTariffData();
     let row = widget.addStack();
     row.centerAlignContent();
@@ -150,13 +152,7 @@ async function displayTariffData(symbolName) {
     const symbol = SFSymbol.named(symbolName);
     symbol.applyMediumWeight();
     const img = row.addImage(symbol.image);
-    
-    // Set the symbol's color based on the tariff type
-    if (tariffType === "electricity") {
-        img.tintColor = new Color("#FFD700"); // Yellow for electricity
-    } else if (tariffType === "gas") {
-        img.tintColor = new Color("#FF4500"); // Fiery orange for gas
-    }
+    img.tintColor = new Color("#FFD700");
     
     // Set the symnol image
     img.imageSize = new Size(30, 30);
@@ -177,17 +173,14 @@ async function displayTariffData(symbolName) {
     widget.addSpacer(4);
 
     let subText, subElement;
-    // Check if tomorrow's price is available and not "N/A"
+    // Check if tomorrow's price is available and not "--"
+    // Calculate the percentage change and the arrow direction
     if (data.nextHour && data.nextHour !== "--") {
         let change = data.now && data.now !== "--" ? ((parseFloat(data.nextHour) - parseFloat(data.now)) / parseFloat(data.now)) * 100 : 0;
-        // Calculate absolute change and format to 2 decimal places for percentage
         let percentageChange = Math.abs(change).toFixed(2) + "%"; 
-        // Determine the arrow direction based on price change
         let arrow = change > 0 ? "↑" : (change < 0 ? "↓" : ""); 
-        // Place the percentage change before the arrow in the display text
-        subText = `Next: ${data.nextHour}p (${percentageChange}${arrow})`; // Adjusted order here
+        subText = `Next: ${data.nextHour}p (${percentageChange}${arrow})`;
         subElement = widget.addText(subText);
-        // Color the text based on price change direction
         subElement.textColor = change > 0 ? new Color("#FF3B30") : (change < 0 ? new Color("#30D158") : Color.white());
         subElement.font = Font.systemFont(11);
     } else {
@@ -198,10 +191,10 @@ async function displayTariffData(symbolName) {
         subElement.font = Font.systemFont(11);
     }
 
-    widget.addSpacer(10); // Add final spacer for layout
+    widget.addSpacer(10);
 }
 
-async function displayConsumptionData() {
+async function displayConsumptionData(widget) {
     const data = await fetchConsumptionData();
     
     let row = widget.addStack();
@@ -234,7 +227,6 @@ async function displayConsumptionData() {
     if (data.yesterday && data.yesterday !== "--") {
         subText = "USED Yesterday";
         subElement = widget.addText(subText);
-        // Color the text based on price change direction
         subElement.textColor = Color.white();
         subElement.font = Font.systemFont(11);
     } else {
@@ -245,19 +237,21 @@ async function displayConsumptionData() {
         subElement.font = Font.systemFont(11);
     }
 
-    widget.addSpacer(20); // Add final spacer for layout
+    widget.addSpacer(20);
 }
 
-// Display tariff information for electricity and gas
-await displayTariffData("bolt.fill");
-await displayConsumptionData();
+// Main
+async function main() {
+    const widget = await createWidget();
+    await displayTariffData(widget, "bolt.fill");
+    await displayConsumptionData(widget);
 
-// Check where the script is running
-if (config.runsInWidget) {
-    // Runs inside a widget so add it to the homescreen widget
-    Script.setWidget(widget);
-} else {
-    // Preview a small widget inside the app
-    widget.presentSmall();
+    if (config.runsInWidget) {
+        Script.setWidget(widget);
+    } else {
+        widget.presentSmall();
+    }
+    Script.complete();
 }
-Script.complete();
+
+await main();
