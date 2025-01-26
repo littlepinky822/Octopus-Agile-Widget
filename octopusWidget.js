@@ -16,8 +16,8 @@ const serialNumber = "<YourSerialNumber>";
 async function createWidget() {
     let listwidget = new ListWidget();
 
-    listwidget.backgroundColor = new Color("#000000");
-
+    listwidget.backgroundColor = new Color("#100030");
+    listwidget.addSpacer(20);
     let heading = listwidget.addText("Agile Octopus")
     heading.centerAlignText();
     heading.font = Font.boldSystemFont(16);
@@ -88,7 +88,7 @@ async function fetchTariffData() {
     } else {
         var urlToday = `${baseUrl}${tariffType}-tariffs/${tariffCode}/standard-unit-rates/?period_from=${formatDate(today)}T${periodFrom}Z&period_to=${formatDate(today)}T${periodTo}Z`;
     }
-    console.log(urlToday);
+
     let dataNow, dataNextHour;
     try {
         let responseToday = await new Request(urlToday).loadJSON();
@@ -112,18 +112,24 @@ async function fetchConsumptionData() {
     // During BST, adjust the period_to to 22:59:59 to account for UTC+1
     let periodToHour = isBST(today) ? "22:59:59" : "23:59:59";
 
-    const headers = { 
-        'Authorization': `Basic ${btoa(`${apiKey}:`)}` 
-    };
+    // const headers = {"Authorization": `Basic ${btoa(`${apiKey}:`)}`};
     const urlToday = `https://api.octopus.energy/v1/electricity-meter-points/${MPAN}/meters/${serialNumber}/consumption/?period_from=${formatDate(today)}T00:00:00Z&period_to=${formatDate(today)}T${periodToHour}Z&group_by=day`;
     const urlYesterday = `https://api.octopus.energy/v1/electricity-meter-points/${MPAN}/meters/${serialNumber}/consumption/?period_from=${formatDate(yesterday)}T00:00:00Z&period_to=${formatDate(yesterday)}T${periodToHour}Z&group_by=day`;
 
     let dataToday, dataYesterday;
     try {
-        let responseToday = await new Request(urlToday, { headers: headers }).loadJSON();
-        let responseYesterday = await new Request(urlYesterday, { headers: headers }).loadJSON();
-        console.log(responseToday);
-        console.log(responseYesterday);
+        let requestToday = await new Request(urlToday);
+        requestToday.headers = {
+            'Authorization': `Basic ${btoa(`${apiKey}:`)}`
+        };
+        let responseToday = await requestToday.loadJSON();
+
+        let requestYesterday = await new Request(urlYesterday);
+        requestYesterday.headers = {
+            'Authorization': `Basic ${btoa(`${apiKey}:`)}`
+        };
+        let responseYesterday = await requestYesterday.loadJSON();
+        
         dataToday = responseToday.results[0] ? responseToday.results[0].consumption.toFixed(2) : "--";
         dataYesterday = responseYesterday.results[0] ? responseYesterday.results[0].consumption.toFixed(2) : "--";
     } catch (error) {
@@ -185,7 +191,7 @@ async function displayTariffData(symbolName) {
         subElement.font = Font.systemFont(11);
     }
 
-    widget.addSpacer(20); // Add final spacer for layout
+    widget.addSpacer(10); // Add final spacer for layout
 }
 
 async function displayConsumptionData() {
@@ -198,7 +204,6 @@ async function displayConsumptionData() {
     const symbol = SFSymbol.named("w.circle.fill");
     symbol.applyMediumWeight();
     const img = row.addImage(symbol.image);
-    img.tintColor = new Color("Purple"); 
     
     // Set the symnol image
     img.imageSize = new Size(30, 30);
