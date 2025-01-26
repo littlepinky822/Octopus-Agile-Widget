@@ -164,9 +164,16 @@ async function displayTariffData(symbolName) {
     row.addSpacer(8);
 
     // Display today's price in a large font
-    let priceElement = row.addText(`${data.now}p`);
-    priceElement.font = Font.boldSystemFont(24);
-    priceElement.textColor = Color.white();
+    let priceStack = row.addStack();
+    priceStack.centerAlignContent();
+    
+    let priceNumber = priceStack.addText(data.now);
+    priceNumber.font = Font.boldSystemFont(24);
+    let priceUnit = priceStack.addText('p');
+    priceUnit.font = Font.boldSystemFont(16);
+
+    priceNumber.textColor = Color.white();
+    priceUnit.textColor = Color.white();
     widget.addSpacer(4);
 
     let subText, subElement;
@@ -196,7 +203,6 @@ async function displayTariffData(symbolName) {
 
 async function displayConsumptionData() {
     const data = await fetchConsumptionData();
-    console.log(data);
     
     let row = widget.addStack();
     row.centerAlignContent();
@@ -211,28 +217,29 @@ async function displayConsumptionData() {
     row.addSpacer(8);
 
     // Display today's price in a large font
-    let priceElement = row.addText(`${data.today}kWh`);
-    priceElement.font = Font.boldSystemFont(24);
-    priceElement.textColor = Color.white();
+    let consumptionStack = row.addStack();
+    consumptionStack.bottomAlignContent();
+
+    let consumptionNumber = consumptionStack.addText(data.yesterday);
+    consumptionNumber.font = Font.boldSystemFont(24);
+    consumptionNumber.textColor = Color.white();
+
+    let consumptionUnit = consumptionStack.addText('kWh');
+    consumptionUnit.font = Font.boldSystemFont(16);
+    consumptionUnit.textColor = Color.white();
     widget.addSpacer(4);
 
     let subText, subElement;
-    // Check if yesterday's price is available and not "N/A"
+    // Check if yesterday's consumption is available and not "--"
     if (data.yesterday && data.yesterday !== "--") {
-        let change = data.today && data.today !== "--" ? ((parseFloat(data.yesterday) - parseFloat(data.today)) / parseFloat(data.today)) * 100 : 0;
-        // Calculate absolute change and format to 2 decimal places for percentage
-        let percentageChange = Math.abs(change).toFixed(2) + "%"; 
-        // Determine the arrow direction based on price change
-        let arrow = change > 0 ? "↑" : (change < 0 ? "↓" : ""); 
-        // Place the percentage change before the arrow in the display text
-        subText = `Previous: ${data.yesterday}kWh (${percentageChange}${arrow})`; // Adjusted order here
+        subText = "USED Yesterday";
         subElement = widget.addText(subText);
         // Color the text based on price change direction
-        subElement.textColor = change > 0 ? new Color("#FF3B30") : (change < 0 ? new Color("#30D158") : Color.white());
+        subElement.textColor = Color.white();
         subElement.font = Font.systemFont(11);
     } else {
         // Display "Coming Soon" if yesterday's price is not available
-        subText = `Previous: Coming Soon`;
+        subText = `USED: Coming Soon`;
         subElement = widget.addText(subText);
         subElement.textColor = Color.white();
         subElement.font = Font.systemFont(11);
