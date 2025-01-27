@@ -11,7 +11,6 @@ const CONFIG = {
     api: {
         // You can get these information from https://octopus.energy/dashboard/new/accounts/personal-details/api-access
         baseUrl: "https://api.octopus.energy/v1/products/",
-        accountId: "<YourAccountId>",
         apiKey: "<YourApiKey>",
         MPAN: "<YourMPAN>",
         serialNumber: "<YourSerialNumber>"
