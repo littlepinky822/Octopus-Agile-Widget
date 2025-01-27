@@ -49,9 +49,9 @@ function getQueryTime(today) {
     let periodFrom;
     let lastDay = false;
     // (Current 23:29:59) 23:00:00 - 01:59:59 | (Current 00:00:00) 23:30:00 - 02:29:59
-    if (isHour00) {
-        periodFrom = `23:${isFirstHalf ? '30' : '00'}:00`;
-        lastDay = isFirstHalf ? true : false;
+    if (isHour00 && isFirstHalf) {
+        periodFrom = "23:30:00";
+        lastDay = true;
     } else {
         periodFrom = `${normalHalfHour}:${isFirstHalf ? '30' : '00'}:00`;
     }
@@ -71,7 +71,7 @@ function getQueryTime(today) {
         }
         nextDay = true;
     } else {
-        const nextHour = isFirstHalf ? (hour + 2).toString().padStart(2, '0') : (hour + 3).toString().padStart(2, '0');
+        const nextHour = (hour + 2).toString().padStart(2, '0');
         periodTo = `${nextHour}:${isFirstHalf ? '29' : '59'}:59`;
     }
 
